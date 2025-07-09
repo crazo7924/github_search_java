@@ -23,6 +23,14 @@ public class RepositorySearchController {
             @RequestBody SearchRequestBody body) {
 
         GithubSearchResponse response = githubSearchService.searchRepositories(body);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (response.getItemCount() == 0) {
+            return ResponseEntity.noContent().build();
+        }
+
         response.setMessage("Repositories fetched and saved successfully");
         return ResponseEntity.ok(response);
     }
