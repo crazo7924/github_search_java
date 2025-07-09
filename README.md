@@ -73,6 +73,11 @@ The application exposes the following REST endpoints.
 | `language` | String | The programming language to filter by.                                    | No       |
 | `sort`     | String | The sort field (e.g., `stars`, `forks`, `help-wanted-issues`, `updated`). | No       |
 
+- **Example `curl` Request**:
+  ```shell
+  curl http://localhost:8080/api/github/search --json '{"query": "spring", "language": "java", "sort": "stars"}'
+  ```
+
 ### 2. Get All Saved Repositories
 
 - **URL**: `/api/search/saved`
