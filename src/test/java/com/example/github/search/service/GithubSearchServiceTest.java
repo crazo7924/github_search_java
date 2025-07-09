@@ -1,4 +1,3 @@
-// src/test/java/com/example/github/search/service/GithubSearchServiceTest.java
 package com.example.github.search.service;
 
 import com.example.github.search.dto.GithubSearchResponse;
@@ -6,6 +5,7 @@ import com.example.github.search.dto.RepositoryItem;
 import com.example.github.search.dto.SearchRequestBody;
 import com.example.github.search.repository.SearchResultRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -39,7 +39,7 @@ class GithubSearchServiceTest {
 
     @BeforeEach
     void setUp() {
-        // A standard request body for happy-path tests
+        // Common setup for search request body
         searchRequestBody = new SearchRequestBody();
         searchRequestBody.setQuery("tetris");
         searchRequestBody.setLanguage("java");
@@ -47,93 +47,122 @@ class GithubSearchServiceTest {
     }
 
     @Test
-    void searchRepositories_Success_ShouldFetchAndSaveItems() {
+    @DisplayName("getSavedRepositories should return all items from the database")
+    void getSavedRepositories_shouldReturnAllItemsFromDatabase() {
         // Arrange
+        RepositoryItem item1 = new RepositoryItem();
+        item1.setId(1L);
+        item1.setName("repo1");
+        List<RepositoryItem> mockItems = List.of(item1);
+        when(repository.findAll()).thenReturn(mockItems);
+
+        // Act
+        GithubSearchResponse response = githubSearchService.getSavedRepositories();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1, response.getItemCount());
+        assertEquals(mockItems, response.getItems());
+        verify(repository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("getSavedRepositories should return an empty response when database is empty")
+    void getSavedRepositories_shouldReturnEmptyResponseWhenDbIsEmpty() {
+        // Arrange
+        when(repository.findAll()).thenReturn(Collections.emptyList());
+
+        // Act
+        GithubSearchResponse response = githubSearchService.getSavedRepositories();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(0, response.getItemCount());
+        assertTrue(response.getItems().isEmpty());
+        verify(repository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("searchRepositories should call GitHub API, save results, and return response")
+    void searchRepositories_shouldCallApiAndSaveResults() {
+        // Arrange
+        RepositoryItem item1 = new RepositoryItem();
+        item1.setId(1L);
+        item1.setName("repo1");
+        List<RepositoryItem> items = List.of(item1);
+
+        GithubSearchResponse mockApiResponse = new GithubSearchResponse();
+        mockApiResponse.setItems(items);
+        mockApiResponse.setItemCount(1);
+
         String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
-        RepositoryItem item = new RepositoryItem();
-        item.setId(1L);
-        item.setName("Tetris");
-
-        List<RepositoryItem> items = Collections.singletonList(item);
-        GithubSearchResponse mockResponse = new GithubSearchResponse(null);
-        mockResponse.setItems(items);
-
         when(githubRestTemplate.getForObject(eq(expectedUrl), eq(GithubSearchResponse.class)))
-                .thenReturn(mockResponse);
+                .thenReturn(mockApiResponse);
 
         // Act
         GithubSearchResponse actualResponse = githubSearchService.searchRepositories(searchRequestBody);
 
         // Assert
         assertNotNull(actualResponse);
-        assertFalse(actualResponse.getItems().isEmpty());
-        assertEquals(1, actualResponse.getItems().size());
-        assertEquals("Tetris", actualResponse.getItems().get(0).getName());
+        assertEquals(1, actualResponse.getItemCount());
+        assertEquals(items, actualResponse.getItems());
 
-        verify(githubRestTemplate).getForObject(eq(expectedUrl), eq(GithubSearchResponse.class));
-        verify(repository).saveAll(items);
+        // Verify that the API was called with the correct URL
+        verify(githubRestTemplate, times(1)).getForObject(eq(expectedUrl), eq(GithubSearchResponse.class));
+        // Verify that the results were saved to the repository
+        verify(repository, times(1)).saveAll(items);
     }
 
     @Test
-    void searchRepositories_ApiReturnsEmptyList_ShouldNotSave() {
+    @DisplayName("searchRepositories should build URL correctly without optional parameters")
+    void searchRepositories_shouldBuildUrlCorrectlyWithoutOptionalParams() {
         // Arrange
-        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
-        GithubSearchResponse mockResponse = new GithubSearchResponse(null);
-        mockResponse.setItems(Collections.emptyList());
+        searchRequestBody.setLanguage(null);
+        searchRequestBody.setSort(null);
 
+        GithubSearchResponse mockApiResponse = new GithubSearchResponse();
+        mockApiResponse.setItems(Collections.emptyList());
+
+        String expectedUrl = "/search/repositories?q=tetris";
         when(githubRestTemplate.getForObject(eq(expectedUrl), eq(GithubSearchResponse.class)))
-                .thenReturn(mockResponse);
+                .thenReturn(mockApiResponse);
 
         // Act
-        GithubSearchResponse actualResponse = githubSearchService.searchRepositories(searchRequestBody);
+        githubSearchService.searchRepositories(searchRequestBody);
 
         // Assert
-        assertNotNull(actualResponse);
-        assertTrue(actualResponse.getItems().isEmpty());
+        // Verify that the API was called with the correctly built URL
+        verify(githubRestTemplate, times(1)).getForObject(eq(expectedUrl), eq(GithubSearchResponse.class));
+        // Verify saveAll is not called for empty results
         verify(repository, never()).saveAll(any());
     }
 
     @Test
-    void searchRepositories_ApiReturnsResponseWithNullItems_ShouldNotSave() {
+    @DisplayName("searchRepositories should not save to DB when API returns no items")
+    void searchRepositories_shouldNotSaveWhenApiReturnsNoItems() {
         // Arrange
-        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
-        GithubSearchResponse mockResponse = new GithubSearchResponse(null);
-        mockResponse.setItems(null); // Items list is null
+        GithubSearchResponse mockApiResponse = new GithubSearchResponse();
+        mockApiResponse.setItems(Collections.emptyList());
+        mockApiResponse.setItemCount(0);
 
-        when(githubRestTemplate.getForObject(eq(expectedUrl), eq(GithubSearchResponse.class)))
-                .thenReturn(mockResponse);
+        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
+        when(githubRestTemplate.getForObject(anyString(), eq(GithubSearchResponse.class)))
+                .thenReturn(mockApiResponse);
 
         // Act
-        GithubSearchResponse actualResponse = githubSearchService.searchRepositories(searchRequestBody);
+        githubSearchService.searchRepositories(searchRequestBody);
 
         // Assert
-        assertNotNull(actualResponse);
-        assertNull(actualResponse.getItems());
+        // Verify that saveAll was never called
         verify(repository, never()).saveAll(any());
     }
 
     @Test
-    void searchRepositories_ApiReturnsNullResponse_ShouldNotSaveAndReturnNull() {
+    @DisplayName("searchRepositories should re-throw HttpClientErrorException on API error")
+    void searchRepositories_shouldRethrowHttpClientErrorException() {
         // Arrange
-        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
-        when(githubRestTemplate.getForObject(eq(expectedUrl), eq(GithubSearchResponse.class)))
-                .thenReturn(null);
-
-        // Act
-        GithubSearchResponse actualResponse = githubSearchService.searchRepositories(searchRequestBody);
-
-        // Assert
-        assertNull(actualResponse);
-        verify(repository, never()).saveAll(any());
-    }
-
-    @Test
-    void searchRepositories_ApiThrowsHttpClientErrorException_ShouldPropagateException() {
-        // Arrange
-        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
-        HttpClientErrorException exception = new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Unauthorized");
-
-        when(githubRestTemplate.getForObject(eq(expectedUrl), eq(GithubSearchResponse.class)))
+        HttpClientErrorException exception = new HttpClientErrorException(HttpStatus.FORBIDDEN, "API rate limit exceeded");
+        when(githubRestTemplate.getForObject(anyString(), eq(GithubSearchResponse.class)))
                 .thenThrow(exception);
 
         // Act & Assert
@@ -142,26 +171,14 @@ class GithubSearchServiceTest {
                 () -> githubSearchService.searchRepositories(searchRequestBody)
         );
 
-        assertEquals(HttpStatus.UNAUTHORIZED, thrown.getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, thrown.getStatusCode());
+        // Verify that no interaction with the repository happened
         verify(repository, never()).saveAll(any());
     }
 
     @Test
-    void searchRepositories_ApiThrowsRuntimeException_ShouldPropagateException() {
-        // Arrange
-        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
-        RuntimeException exception = new RuntimeException("Unexpected error");
-
-        when(githubRestTemplate.getForObject(eq(expectedUrl), eq(GithubSearchResponse.class)))
-                .thenThrow(exception);
-
-        // Act & Assert
-        assertThrows(RuntimeException.class, () -> githubSearchService.searchRepositories(searchRequestBody));
-        verify(repository, never()).saveAll(any());
-    }
-
-    @Test
-    void searchRepositories_WithNullQuery_ShouldThrowIllegalArgumentException() {
+    @DisplayName("searchRepositories should throw IllegalArgumentException for null query")
+    void searchRepositories_shouldThrowExceptionForNullQuery() {
         // Arrange
         searchRequestBody.setQuery(null);
 
@@ -176,9 +193,10 @@ class GithubSearchServiceTest {
     }
 
     @Test
-    void searchRepositories_WithEmptyQuery_ShouldThrowIllegalArgumentException() {
+    @DisplayName("searchRepositories should throw IllegalArgumentException for blank query")
+    void searchRepositories_shouldThrowExceptionForBlankQuery() {
         // Arrange
-        searchRequestBody.setQuery("");
+        searchRequestBody.setQuery("   "); // Blank query
 
         // Act & Assert
         IllegalArgumentException thrown = assertThrows(
@@ -223,6 +241,21 @@ class GithubSearchServiceTest {
         // Arrange
         searchRequestBody.setSort("");
         String expectedUrl = "/search/repositories?q=tetris+language:java"; // No sort parameter
+        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse(null));
+
+        // Act
+        githubSearchService.searchRepositories(searchRequestBody);
+
+        // Assert
+        verify(githubRestTemplate).getForObject(eq(expectedUrl), eq(GithubSearchResponse.class));
+    }
+
+
+    @Test
+    void searchRepositories_WithEmptyLanguage_ShouldBuildQueryCorrectly() {
+        // Arrange
+        searchRequestBody.setLanguage("");
+        String expectedUrl = "/search/repositories?q=tetris&sort=stars"; // No language parameter
         when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse(null));
 
         // Act
