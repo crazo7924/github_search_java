@@ -145,7 +145,6 @@ class GithubSearchServiceTest {
         mockApiResponse.setItems(Collections.emptyList());
         mockApiResponse.setItemCount(0);
 
-        String expectedUrl = "/search/repositories?q=tetris+language:java&sort=stars";
         when(githubRestTemplate.getForObject(anyString(), eq(GithubSearchResponse.class)))
                 .thenReturn(mockApiResponse);
 
@@ -213,7 +212,7 @@ class GithubSearchServiceTest {
         // Arrange
         searchRequestBody.setLanguage(null);
         String expectedUrl = "/search/repositories?q=tetris&sort=stars"; // No language parameter
-        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse(null));
+        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse());
 
         // Act
         githubSearchService.searchRepositories(searchRequestBody);
@@ -227,7 +226,7 @@ class GithubSearchServiceTest {
         // Arrange
         searchRequestBody.setSort(null);
         String expectedUrl = "/search/repositories?q=tetris+language:java"; // No sort parameter
-        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse(null));
+        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse());
 
         // Act
         githubSearchService.searchRepositories(searchRequestBody);
@@ -241,7 +240,7 @@ class GithubSearchServiceTest {
         // Arrange
         searchRequestBody.setSort("");
         String expectedUrl = "/search/repositories?q=tetris+language:java"; // No sort parameter
-        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse(null));
+        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse());
 
         // Act
         githubSearchService.searchRepositories(searchRequestBody);
@@ -256,7 +255,7 @@ class GithubSearchServiceTest {
         // Arrange
         searchRequestBody.setLanguage("");
         String expectedUrl = "/search/repositories?q=tetris&sort=stars"; // No language parameter
-        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse(null));
+        when(githubRestTemplate.getForObject(anyString(), any())).thenReturn(new GithubSearchResponse());
 
         // Act
         githubSearchService.searchRepositories(searchRequestBody);
