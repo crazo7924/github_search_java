@@ -22,17 +22,22 @@ public class RepositorySearchController {
     public ResponseEntity<GithubSearchResponse> searchRepositories(
             @RequestBody SearchRequestBody body) {
 
-        GithubSearchResponse response = githubSearchService.searchRepositories(body);
-        if (response == null) {
-            return ResponseEntity.notFound().build();
-        }
+        try {
+            GithubSearchResponse response = githubSearchService.searchRepositories(body);
 
-        if (response.getItemCount() == 0) {
-            return ResponseEntity.noContent().build();
-        }
+            if (response == null) {
+                return ResponseEntity.notFound().build();
+            }
 
-        response.setMessage("Repositories fetched and saved successfully");
-        return ResponseEntity.ok(response);
+            if (response.getItemCount() == 0) {
+                return ResponseEntity.noContent().build();
+            }
+
+            response.setMessage("Repositories fetched and saved successfully");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new GithubSearchResponse(e.getMessage()));
+        }
     }
 
     @GetMapping("/saved")
