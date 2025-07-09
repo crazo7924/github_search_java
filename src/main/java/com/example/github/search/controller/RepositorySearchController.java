@@ -34,4 +34,20 @@ public class RepositorySearchController {
         response.setMessage("Repositories fetched and saved successfully");
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/saved")
+    public ResponseEntity<GithubSearchResponse> getSavedRepositories() {
+
+        GithubSearchResponse response = githubSearchService.getSavedRepositories();
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (response.getItemCount() == 0) {
+            return ResponseEntity.noContent().build();
+        }
+
+        response.setMessage("Repositories fetched from Database successfully");
+        return ResponseEntity.ok(response);
+    }
 }

@@ -28,6 +28,15 @@ public class GithubSearchService {
         this.repository = repository;
     }
 
+    public GithubSearchResponse getSavedRepositories() {
+        GithubSearchResponse response = new GithubSearchResponse();
+        List<RepositoryItem> items = repository.findAll();
+
+        response.setItems(items);
+        response.setItemCount(items.size());
+        return response;
+    }
+
     private String buildQuery(String query, String language) throws IllegalArgumentException {
 
         if (query == null) {
