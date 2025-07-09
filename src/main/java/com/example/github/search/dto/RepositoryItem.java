@@ -1,6 +1,8 @@
 package com.example.github.search.dto;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -81,6 +83,7 @@ public class RepositoryItem {
         this.language = language;
     }
 
+    @JsonGetter("owner")
     public String getOwnerName() {
         return ownerName;
     }
